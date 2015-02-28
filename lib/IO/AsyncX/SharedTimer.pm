@@ -55,9 +55,11 @@ outweigh any potential benefits.
 One benchmark gave the following results for 1ms resolution across 100
 timers set to rand(1) seconds:
 
-            Rate      normal   shared 
+            Rate      normal   shared
  normal    32.9/s        --      -50%
  shared    65.7/s      100%        --
+
+See the examples/ directory for code.
 
 =cut
 
@@ -110,6 +112,10 @@ after L</resolution> seconds - note that the expiry happens via the event
 loop so if your code does not cede control back to the main event loop
 in a timely fashion, the cached value will not expire. Put another way:
 the value will be cached for at least L</resolution> seconds.
+
+There's a good chance that the method call overhead will incur a heavier
+performance impact than just calling L<Time::HiRes> C<time> directly.
+As always, profile and benchmark first.
 
 Example usage:
 
