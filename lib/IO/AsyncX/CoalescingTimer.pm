@@ -96,13 +96,13 @@ Example usage:
  my $start = $timer->now;
  $loop->run;
  my $elapsed = 1000.0 * ($timer->now - $start);
- say "Operation took ${elapsed}ms to complete.";
+ say "Operation took about ${elapsed}ms to complete.";
 
 =cut
 
 sub now {
 	my ($self) = @_;
-	$self->{after} ||= $self->loop->delay_future(
+	$self->{after} ||= ($self->loop or die "Must add this timer to a loop first")->delay_future(
 		after => $self->resolution
 	)->on_ready($self->curry::weak::expire);
 	$self->{now} //= Time::HiRes::time;
