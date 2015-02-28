@@ -5,13 +5,13 @@ use Test::More;
 use Test::Fatal;
 use Scalar::Util ();
 
-use IO::AsyncX::CoalescingTimer;
+use IO::AsyncX::SharedTimer;
 
 use IO::Async::Loop;
 
 my $loop = IO::Async::Loop->new;
 $loop->add(
-	my $timer = new_ok('IO::AsyncX::CoalescingTimer', [
+	my $timer = new_ok('IO::AsyncX::SharedTimer', [
 		resolution => '0.05',
 	])
 );
