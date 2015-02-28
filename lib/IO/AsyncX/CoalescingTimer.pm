@@ -131,9 +131,13 @@ BEGIN {
 			my ($self, %args) = @_;
 			my $at = exists $args{at} ? delete $args{at} : $self->now + delete $args{after}
 				or die "Invalid or unspecified time";
-			my $bucket = int(($at - $^T) / $self->resolution);
+			# Resolution may change over time. We don't want to stomp on old values when this happens.
+			# We also want to support both timeout+delay with the same values.
+			my $bucket = join '-', $m, $self->resolution, int(($at - $^T) / $self->resolution);
 			my $f = $self->loop->new_future;
-			($self->{bucket}{$bucket} ||= $self->loop->$m(at => $at))->on_ready($f);
+			($self->{bucket}{$bucket} ||= $self->loop->$m(at => $at)->on_ready(sub {
+				delete $self->{bucket}{$bucket}
+			}))->on_ready($f);
 			$f
 		};
 	}
