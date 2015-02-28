@@ -1,5 +1,5 @@
 package IO::AsyncX::CoalescingTimer;
-# ABSTRACT: 
+# ABSTRACT: Low-accuracy shared timers for IO::Async
 use strict;
 use warnings;
 
@@ -13,7 +13,31 @@ IO::AsyncX::CoalescingTimer -
 
 =head1 SYNOPSIS
 
+ # Needs to be added to a loop before you can
+ # call any other methods
+ my $loop = IO::Async::Loop->new;
+ $loop->add(
+  my $timer = IO::AsyncX::CoalescingTimer->new(
+   # Combine timers into 50ms buckets, and
+   # use cached value for ->now with 50ms expiry
+   resolution => 0.050,
+  )
+ );
+
+ # Report current time, accurate to ~50ms
+ use feature qw(say);
+ say "Time is roughly " . $timer->now;
+
+ # Set a timeout for ~30s on an I/O operation
+ Future->wait_any(
+  $client->read_until(qr/\n/),
+  $timer->timeout_future(after => 30)
+ )->get;
+
 =head1 DESCRIPTION
+
+This module provides various time-related utility methods for use
+with larger L<IO::Async> applications.
 
 =cut
 
@@ -21,6 +45,20 @@ use Time::HiRes ();
 use curry::weak;
 
 =head1 METHODS
+
+=cut
+
+=head2 configure
+
+Change the current resolution.
+
+Takes one named parameter:
+
+=over 4
+
+=item * resolution - the resolution for timers and L</now>, in seconds
+
+=back
 
 =cut
 
@@ -32,7 +70,35 @@ sub configure {
 	$self->SUPER::configure(%args);
 }
 
+=head2 resolution
+
+Returns the current resolution.
+
+=cut
+
 sub resolution { shift->{resolution} }
+
+=head2 now
+
+Returns an approximation of the current time.
+
+On first call, it will return (and cache) the value provided by
+the L<Time::Hires> C<time> function.
+
+Subsequent calls will return this same value. The cached value expires
+after L</resolution> seconds - note that the expiry happens via the event
+loop so if your code does not cede control back to the main event loop
+in a timely fashion, the cached value will not expire. Put another way:
+the value will be cached for at least L</resolution> seconds.
+
+Example usage:
+
+ my $start = $timer->now;
+ $loop->run;
+ my $elapsed = 1000.0 * ($timer->now - $start);
+ say "Operation took ${elapsed}ms to complete.";
+
+=cut
 
 sub now {
 	my ($self) = @_;
@@ -42,10 +108,21 @@ sub now {
 	$self->{now} //= Time::HiRes::time;
 }
 
-sub expire {
-	my ($self) = @_;
-	delete @{$self}{qw(now after)};
-}
+=head2 delay_future
+
+Returns a L<Future> which will resolve after approximately L</resolution> seconds.
+
+See the C<delay_future> documentation in L<IO::Async::Loop> for more details.
+
+=cut
+
+=head2 timeout_future
+
+Returns a L<Future> which will fail after approximately L</resolution> seconds.
+
+See the C<delay_future> documentation in L<IO::Async::Loop> for more details.
+
+=cut
 
 BEGIN {
 	for my $m (qw(delay_future timeout_future)) {
@@ -62,11 +139,14 @@ BEGIN {
 	}
 }
 
+sub expire {
+	my ($self) = @_;
+	delete @{$self}{qw(now after)};
+}
+
 1;
 
 __END__
-
-=head1 SEE ALSO
 
 =head1 AUTHOR
 
