@@ -47,6 +47,21 @@ sub expire {
 	delete @{$self}{qw(now after)};
 }
 
+BEGIN {
+	for my $m (qw(delay_future timeout_future)) {
+		no strict 'refs';
+		*{__PACKAGE__ . '::' . $m} = sub {
+			my ($self, %args) = @_;
+			my $at = exists $args{at} ? delete $args{at} : $self->now + delete $args{after}
+				or die "Invalid or unspecified time";
+			my $bucket = int(($at - $^T) / $self->resolution);
+			my $f = $self->loop->new_future;
+			($self->{bucket}{$bucket} ||= $self->loop->$m(at => $at))->on_ready($f);
+			$f
+		};
+	}
+}
+
 1;
 
 __END__
