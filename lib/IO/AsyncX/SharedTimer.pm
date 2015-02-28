@@ -52,6 +52,13 @@ please benchmark the difference before assuming that this module will
 be worth using - for some applications the overhead this introduces will
 outweigh any potential benefits.
 
+One benchmark gave the following results for 1ms resolution across 100
+timers set to rand(1) seconds:
+
+            Rate      normal   shared 
+ normal    32.9/s        --      -50%
+ shared    65.7/s      100%        --
+
 =cut
 
 use Time::HiRes ();
