@@ -1,4 +1,4 @@
-package IO::AsyncX::CoalescingTimer;
+package IO::AsyncX::SharedTimer;
 # ABSTRACT: Low-accuracy shared timers for IO::Async
 use strict;
 use warnings;
@@ -9,7 +9,7 @@ our $VERSION = '0.001';
 
 =head1 NAME
 
-IO::AsyncX::CoalescingTimer -
+IO::AsyncX::SharedTimer - provides L<IO::Async> timers which sacrifice accuracy for performance
 
 =head1 SYNOPSIS
 
@@ -17,14 +17,15 @@ IO::AsyncX::CoalescingTimer -
  # call any other methods
  my $loop = IO::Async::Loop->new;
  $loop->add(
-  my $timer = IO::AsyncX::CoalescingTimer->new(
+  my $timer = IO::AsyncX::SharedTimer->new(
    # Combine timers into 50ms buckets, and
    # use cached value for ->now with 50ms expiry
    resolution => 0.050,
   )
  );
 
- # Report current time, accurate to ~50ms
+ # Report current time, accurate to ~50ms (defined
+ # by the resolution parameter, as above)
  use feature qw(say);
  say "Time is roughly " . $timer->now;
 
@@ -38,6 +39,18 @@ IO::AsyncX::CoalescingTimer -
 
 This module provides various time-related utility methods for use
 with larger L<IO::Async> applications.
+
+In situations where you have many related timers - connection expiry,
+for example - there may be some overhead in having each of these in the
+timer priority queue as a separate event. Sometimes the exact trigger
+time is not so important, which is where this class comes in. You get
+to specify an accuracy, and all timers which would occur within the
+same window of time will be grouped together as a single timer event.
+
+This may reduce calls to poll/epoll and timer management overhead, but
+please benchmark the difference before assuming that this module will
+be worth using - for some applications the overhead this introduces will
+outweigh any potential benefits.
 
 =cut
 
@@ -158,5 +171,5 @@ Tom Molesworth <cpan@perlsite.co.uk>
 
 =head1 LICENSE
 
-Copyright Tom Molesworth 2014. Licensed under the same terms as Perl itself.
+Copyright Tom Molesworth 2014-2015. Licensed under the same terms as Perl itself.
 
